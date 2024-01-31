@@ -14,11 +14,21 @@ def print_bid(current_bid):
 
 def player_bid(current_bid):
     print_bid(current_bid)
-    bid = input("Enter your bid (quantity value): ")
-    bid = bid.split()
-    quantity = int(bid[0])
-    value = int(bid[1])
-    return (quantity, value)
+    while True:
+        bid = input("Enter your bid (quantity value): ")
+        bid = bid.split()
+        if len(bid) != 2 or any(not 1 <= int(val) <= 6 for val in bid):
+            print("Invalid input. Please enter two numbers separated by a space.")
+            continue
+        try:
+            quantity = int(bid[0])
+            value = int(bid[1])
+            if quantity > current_bid[0] or (quantity == current_bid[0] and value > current_bid[1]):
+                return (quantity, value)
+            else:
+                print("Your bid must be higher than the current bid.")
+        except ValueError:
+            print("Invalid input. Please enter two numbers separated by a space.")
 
 def cpu_bid(current_bid, num_dice):
     quantity, value = current_bid
