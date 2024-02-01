@@ -1,139 +1,137 @@
 import random
 
-def roll_dice(num_dice):
-    return [random.randint(1, 6) for _ in range(num_dice)]
+class Player:
+    def __init__(self, is_human=True):
+        self.is_human = is_human
+        self.dice_count = 5  # Initial number of dice
+        self.dice = []  # Player's dice
 
-def count_dice(dice, value):
-    return dice.count(value)
-
-def print_dice(dice):
-    print("Your dice:", dice)
-
-def print_bid(current_bid):
-    print("Current bid:", current_bid)
-
-def player_bid(current_bid):
-    print_bid(current_bid)
-    while True:
-        bid = input("Enter your bid (quantity value): ")
-        bid = bid.split()
-        if len(bid) != 2 or any(not 1 <= int(val) <= 6 for val in bid):
-            print("Invalid input. Please enter two numbers separated by a space.")
-            continue
-        try:
-            quantity = int(bid[0])
-            value = int(bid[1])
-            if quantity > current_bid[0] or (quantity == current_bid[0] and value > current_bid[1]):
-                return (quantity, value)
-            else:
-                print("Your bid must be higher than the current bid.")
-        except ValueError:
-            print("Invalid input. Please enter two numbers separated by a space.")
-
-def cpu_bid(current_bid, num_dice):
-    quantity, value = current_bid
-    if random.random() < 0.5:
-        quantity += random.randint(1, 2)
-    else:
-        value += random.randint(1, 2)
-        if value > 6:
-            value = 6
-    if quantity > num_dice:
-        quantity = num_dice
-    return (quantity, value)
-
-def player_turn(player_dice, num_dice, current_bid):
-    print_dice(player_dice)
-    print_bid(current_bid)
-    while True:
-        action = input("Choose your action (call, raise): ").lower()
-        if action == "call":
-            return "call"
-        elif action == "raise":
-            return player_bid(current_bid)
+    def roll_dice(self):
+        self.dice = [random.randint(1, 6) for _ in range(self.dice_count)]
+    
+    def bid(self, current_bid):
+        if self.is_human:
+            return self._human_bid(current_bid)
         else:
-            print("Invalid action. Please choose from call or raise.")
+            return self._cpu_bid(current_bid)
 
-def cpu_turn(num_dice, current_bid):
-    action = random.choice(["call", "raise"])
-    if action == "raise":
-        new_bid = cpu_bid(current_bid, num_dice)
-        print("CPU raised the bid to {} {}s.".format(new_bid[0], new_bid[1]))
-        return new_bid
-    else:
-        return action
+    def _human_bid(self, current_bid):
+        print(f"Your dice: {self.dice}")
+        print(f"Current bid: {current_bid}")
+        while True:
+            bid = input("Enter your bid (quantity value): ")
+            bid = bid.split()
+            if len(bid) != 2 or any(not 1 <= int(val) <= 6 for val in bid):
+                print("Invalid input. Please enter two numbers separated by a space.")
+                continue
+            try:
+                quantity = int(bid[0])
+                value = int(bid[1])
+                if quantity > current_bid[0] or (quantity == current_bid[0] and value > current_bid[1]):
+                    return (quantity, value)
+                else:
+                    print("Your bid must be higher than the current bid.")
+            except ValueError:
+                print("Invalid input. Please enter two numbers separated by a space.")
 
-def call_bluff(player_dice, cpu_dice, current_bid):
-    quantity, value = current_bid
-    total_count = count_dice(player_dice, value) + count_dice(cpu_dice, value)
-    print(f"There are a total of {total_count} {value}s")
-    if quantity > total_count:
-        return True 
-    else:
-        return False
+    def _cpu_bid(self, current_bid):
+        quantity, value = current_bid
+        if random.random() < 0.5:
+            quantity += random.randint(1, 2)
+        else:
+            value += random.randint(1, 2)
+            if value > 6:
+                value = 6
+        if quantity > self.dice_count:
+            quantity = self.dice_count
+        return (quantity, value)
 
-def play_liars_dice():
-    num_dice = 5
-    player_dice_count = num_dice
-    cpu_dice_count = num_dice
+    def call_bluff(self, current_bid, total_count):
+        quantity, value = current_bid
+        print(f"There are a total of {total_count} {value}s")
+        if quantity > total_count:
+            if self.is_human:
+                print("You called bluff successfully. CPU loses a die")
+            else:
+                print("CPU called bluff successfully. You lose a die")
+            self.dice_count -= 1
+            return True
+        else:
+            if self.is_human:
+                print("You called bluff incorrectly. You lose a die")
+            else:
+                print("CPU called bluff incorrectly. CPU loses a die")
+            return False
+    
+    def take_turn(self, current_bid):
+        if self.is_human:
+            return self._human_turn(current_bid)
+        else:
+            return self._cpu_turn(current_bid)
+
+    def _human_turn(self, current_bid):
+        print(f"Your dice: {self.dice}")
+        print(f"Current bid: {current_bid}")
+        while True:
+            action = input("Choose your action (bid, call): ").lower()
+            if action == 'bid':
+                return self._human_bid(current_bid)
+            elif action == 'call':
+                return 'call'
+            else:
+                print("Invalid action. Please choose 'bid' or 'call'.")
+    
+    def _cpu_turn(self, current_bid):
+        action = random.choice(['bid', 'call'])
+        if action == 'bid':
+            return self._cpu_bid(current_bid)
+        else:
+            return 'call'
+
+
+def play_liars_dice(num_players=2):
+    players = [Player(is_human=(i == 0)) for i in range(num_players)]
 
     while True:
-        # Players roll their dice
-        player_dice = roll_dice(player_dice_count)
-        cpu_dice = roll_dice(cpu_dice_count)
+        for player in players:
+            player.roll_dice()
 
-        # Initialize current bid for the round
         current_bid = (1, 1)  # Initial bid
+        total_dice_count = [player.dice_count for player in players]
 
-        print_dice(player_dice)
-        print(f"CPU dice: {cpu_dice}")
-        print_bid(current_bid)
-
-        # Player and CPU take turns until someone calls
         while True:
-            # Player's turn
-            print("\nYour turn:")
-            action = input("Choose your action (raise, call): ").lower()
-            if action == "call":
-                result = call_bluff(player_dice, cpu_dice, current_bid)
-                if result == True:
-                    print("You called bluff successfully. CPU loses a die")
-                    cpu_dice_count -= 1
+            for i, player in enumerate(players):
+                print(f"\nPlayer {i+1}'s turn:")
+                
+                if current_bid == (1, 1):
+                    # First turn, ask for a bid
+                    action = player.bid(current_bid)
                 else:
-                    print("You called bluff incorrectly. You lose a die")
-                    player_dice_count -= 1
-                break
-            elif action == "raise":
-                current_bid = player_bid(current_bid)
-            else:
-                print("Invalid action. Please choose from raise or call.")
+                    # Subsequent turns, give the choice of either a bid or a call
+                    action = player.take_turn(current_bid)
 
-            # CPU's turn
-            print("\nCPU's turn:")
-            action = cpu_turn(cpu_dice_count, current_bid)
-            if action == "call":
-                result = call_bluff(player_dice, cpu_dice, current_bid)
-                if result == True:
-                    print("CPU called bluff successfully. You lose a die")
-                    player_dice_count -= 1
+                if action == "call":
+                    total_count = sum([player.dice.count(current_bid[1]) for player in players])
+                    result = player.call_bluff(current_bid, total_count)
+                    if result:
+                        total_dice_count[i-1] -= 1
+                    else:
+                        total_dice_count[i] -= 1
+                    break
                 else:
-                    print("CPU called bluff incorrectly. CPU loses a die")
-                    cpu_dice_count -= 1
-                break
-            else:
-                current_bid = action
+                    current_bid = action
 
-        # Check for end of game
-        if player_dice_count == 0:
-            return "cpu"
-        elif cpu_dice_count == 0:
-            return "player"
-        
+            if 0 in total_dice_count:
+                if total_dice_count[0] == 0:
+                    return "CPU"
+                else:
+                    return "Player"
+
 # Main game loop
 while True:
     winner = play_liars_dice()
-    if winner == "player":
-        print("Congratulations! You win!")
+    if winner == "Player":
+        print("Congratulations! You win!")   
     else:
         print("CPU wins! Better luck next time.")
     play_again = input("Do you want to play again? (yes/no): ").lower()
