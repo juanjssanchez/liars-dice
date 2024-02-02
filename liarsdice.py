@@ -56,16 +56,8 @@ class Player:
         quantity, value = current_bid
         print(f"There are a total of {total_count} {value}s")
         if quantity > total_count:
-            if self.is_human:
-                print("You called bluff successfully. CPU loses a die")
-            else:
-                print("CPU called bluff successfully. You lose a die")
             return True
         else:
-            if self.is_human:
-                print("You called bluff incorrectly. You lose a die")
-            else:
-                print("CPU called bluff incorrectly. CPU loses a die")
             return False
     
     def take_turn(self, current_bid):
@@ -102,7 +94,7 @@ def play_liars_dice(num_players=2):
     while True:
         for player in players:
             player.roll_dice()
-            #print(player.dice)
+            print(player.dice)
 
         current_bid = None
 
@@ -124,31 +116,32 @@ def play_liars_dice(num_players=2):
                         # Player getting called out loses a die
                         previous_player_index = (i - 1) % num_players
                         players[previous_player_index].lose_die()
+                        print(f"Player {previous_player_index + 1} loses a die")
                     else:
                         # Player who called loses a die
                         player.lose_die()
+                        print(f"Player {i+1} loses a die")
                     break
                 else:
                     current_bid = action
-
-            if 0 in [player.dice_count for player in players]:
-                
-                print("END GAME REACHED")
-                # if total_dice_count[0] == 0:
-                #     return "CPU"
-                # else:
-                #     return "Player"
+            
+            
+            active_players = [player for player in players if player.dice_count > 0]
+            if len(active_players) == 1:
+                print(f"\nPlayer {active_players[0].is_human} wins!")
+                return active_players[0].is_human
             
             # Start new round if someone called
             if action == "call":
-                print(f"\nYour dice: {players[0].dice_count} CPU dice: {players[1].dice_count}")
+                #print(f"\nYour dice: {players[0].dice_count} CPU dice: {players[1].dice_count}")
                 break
 
 # Main game loop
 while True:
-    winner = play_liars_dice()
-    if winner == "Player":
-        print("Congratulations! You win!")   
+    num_players = int(input("Enter number of players: "))
+    winner_index = play_liars_dice(num_players)
+    if winner_index == 0:
+        print("Congratulations! You win!")
     else:
         print("CPU wins! Better luck next time.")
     play_again = input("Do you want to play again? (yes/no): ").lower()
