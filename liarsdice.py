@@ -38,19 +38,26 @@ class Player:
                 print("Invalid input. Please enter two numbers separated by a space.")
 
     def _cpu_bid(self, current_bid):
-        quantity, value = current_bid
-        if random.random() < 0.5:
-            quantity += random.randint(1, 2)
+        if current_bid is None:
+            # If no bid has been made yet, generate a random bid
+            quantity = random.randint(1, self.dice_count)
+            value = random.randint(1, 6)
         else:
-            value += random.randint(1, 2)
-            if value > 6:
-                value = 6
-        if quantity > self.dice_count:
-            quantity = self.dice_count
+            # Generate a bid based on the current bid
+            quantity, value = current_bid
+            if random.random() < 0.5:
+                quantity += random.randint(1, 2)
+            else:
+                value += random.randint(1, 2)
+                if value > 6:
+                    value = 6
+            if quantity > self.dice_count:
+                quantity = self.dice_count
         new_bid = (quantity, value)
         
         print(f"New bid: {new_bid}")
         return new_bid
+
 
     def call_bluff(self, current_bid, total_count):
         quantity, value = current_bid
@@ -99,8 +106,8 @@ def play_liars_dice(num_players=2):
         current_bid = None
 
         while True:
-            for i, player in enumerate(players):
-                print(f"\nPlayer {i+1}'s turn:")
+            for player in [p for p in players if p.dice_count > 0]:  # Iterate over active players only
+                print(f"\nPlayer {players.index(player) + 1}'s turn:")
                 
                 if current_bid is None:
                     # First turn, ask for a bid
@@ -110,40 +117,35 @@ def play_liars_dice(num_players=2):
                     action = player.take_turn(current_bid)
 
                 if action == "call":
-                    total_count = sum([player.dice.count(current_bid[1]) for player in players])
+                    total_count = sum([p.dice.count(current_bid[1]) for p in players])
                     result = player.call_bluff(current_bid, total_count)
                     if result:
                         # Player getting called out loses a die
-                        previous_player_index = (i - 1) % num_players
-                        players[previous_player_index].lose_die()
-                        print(f"Player {previous_player_index + 1} loses a die")
+                        players[(players.index(player) - 1) % num_players].lose_die()
+                        print(f"Player {(players.index(player) - 1) % num_players + 1} loses a die")
                     else:
                         # Player who called loses a die
                         player.lose_die()
-                        print(f"Player {i+1} loses a die")
+                        print(f"Player {players.index(player) + 1} loses a die")
                     break
                 else:
                     current_bid = action
             
-            
-            active_players = [player for player in players if player.dice_count > 0]
+            active_players = [p for p in players if p.dice_count > 0]
             if len(active_players) == 1:
-                print(f"\nPlayer {active_players[0].is_human} wins!")
-                return active_players[0].is_human
+                print(f"\nPlayer {players.index(active_players[0]) + 1} wins!")
+                return players.index(active_players[0]) + 1
             
             # Start new round if someone called
             if action == "call":
-                #print(f"\nYour dice: {players[0].dice_count} CPU dice: {players[1].dice_count}")
                 break
+
 
 # Main game loop
 while True:
     num_players = int(input("Enter number of players: "))
-    winner_index = play_liars_dice(num_players)
-    if winner_index == 0:
-        print("Congratulations! You win!")
-    else:
-        print("CPU wins! Better luck next time.")
+    play_liars_dice(num_players)
+
     play_again = input("Do you want to play again? (yes/no): ").lower()
     if play_again != "yes":
         break
