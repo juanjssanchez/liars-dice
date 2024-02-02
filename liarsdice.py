@@ -1,7 +1,8 @@
 import random
 
 class Player:
-    def __init__(self, is_human=True):
+    def __init__(self, name="Player", is_human=True):
+        self.name = name
         self.is_human = is_human
         self.dice_count = 5  # Initial number of dice
         self.dice = []  # Player's dice
@@ -94,9 +95,9 @@ class Player:
             print("CPU chose to call")
             return 'call'
 
-
 def play_liars_dice(num_players=2):
-    players = [Player(is_human=(i == 0)) for i in range(num_players)]
+    player_names = [input(f"Enter name for Player {i + 1}: ") for i in range(num_players)]
+    players = [Player(name, is_human=(i == 0)) for i, name in enumerate(player_names)]
 
     while True:
         for player in players:
@@ -106,8 +107,8 @@ def play_liars_dice(num_players=2):
         current_bid = None
 
         while True:
-            for player in [p for p in players if p.dice_count > 0]:  # Iterate over active players only
-                print(f"\nPlayer {players.index(player) + 1}'s turn:")
+            for i, player in enumerate([p for p in players if p.dice_count > 0]):  # Iterate over active players only
+                print(f"\n{player.name}'s turn:")
                 
                 if current_bid is None:
                     # First turn, ask for a bid
@@ -118,28 +119,38 @@ def play_liars_dice(num_players=2):
 
                 if action == "call":
                     total_count = sum([p.dice.count(current_bid[1]) for p in players])
+                    if current_bid[1] != 1:
+                        wild_ones_count = sum([p.dice.count(1) for p in players])
+                        total_count += wild_ones_count
+
                     result = player.call_bluff(current_bid, total_count)
                     if result:
                         # Player getting called out loses a die
-                        players[(players.index(player) - 1) % num_players].lose_die()
-                        print(f"Player {(players.index(player) - 1) % num_players + 1} loses a die")
+                        prev_index = (i - 1) % len(players)  # Calculate the index of the previous player with modulo
+                        prev_player = players[prev_index]  # Access the previous player using the calculated index
+                        prev_player.lose_die()
+                        print(f"{prev_player.name} loses a die")
                     else:
                         # Player who called loses a die
                         player.lose_die()
-                        print(f"Player {players.index(player) + 1} loses a die")
+                        print(f"{player.name} loses a die")
                     break
                 else:
                     current_bid = action
-            
-            active_players = [p for p in players if p.dice_count > 0]
-            if len(active_players) == 1:
-                print(f"\nPlayer {players.index(active_players[0]) + 1} wins!")
-                return players.index(active_players[0]) + 1
-            
+                
+            # Remove players who have lost all their dice
+            players = [p for p in players if p.dice_count > 0]
+
+            # Check if there's only one player left
+            if len(players) == 1:
+                print(f"\n{players[0].name} wins!")
+                return players[0].name
+                
             # Start new round if someone called
             if action == "call":
+                # Rotate players list so that the next player makes the first bid in the new round
+                players.append(players.pop(0))
                 break
-
 
 # Main game loop
 while True:
