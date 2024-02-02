@@ -9,6 +9,9 @@ class Player:
     def roll_dice(self):
         self.dice = [random.randint(1, 6) for _ in range(self.dice_count)]
     
+    def lose_die(self):
+        self.dice_count -= 1
+
     def bid(self, current_bid):
         if self.is_human:
             return self._human_bid(current_bid)
@@ -27,7 +30,7 @@ class Player:
             try:
                 quantity = int(bid[0])
                 value = int(bid[1])
-                if quantity > current_bid[0] or (quantity == current_bid[0] and value > current_bid[1]):
+                if current_bid is None or quantity > current_bid[0] or (quantity == current_bid[0] and value > current_bid[1]):
                     return (quantity, value)
                 else:
                     print("Your bid must be higher than the current bid.")
@@ -44,7 +47,10 @@ class Player:
                 value = 6
         if quantity > self.dice_count:
             quantity = self.dice_count
-        return (quantity, value)
+        new_bid = (quantity, value)
+        
+        print(f"New bid: {new_bid}")
+        return new_bid
 
     def call_bluff(self, current_bid, total_count):
         quantity, value = current_bid
@@ -54,7 +60,6 @@ class Player:
                 print("You called bluff successfully. CPU loses a die")
             else:
                 print("CPU called bluff successfully. You lose a die")
-            self.dice_count -= 1
             return True
         else:
             if self.is_human:
@@ -84,8 +89,10 @@ class Player:
     def _cpu_turn(self, current_bid):
         action = random.choice(['bid', 'call'])
         if action == 'bid':
+            print("CPU chose to raise the bid")
             return self._cpu_bid(current_bid)
         else:
+            print("CPU chose to call")
             return 'call'
 
 
@@ -95,15 +102,15 @@ def play_liars_dice(num_players=2):
     while True:
         for player in players:
             player.roll_dice()
+            #print(player.dice)
 
-        current_bid = (1, 1)  # Initial bid
-        total_dice_count = [player.dice_count for player in players]
+        current_bid = None
 
         while True:
             for i, player in enumerate(players):
                 print(f"\nPlayer {i+1}'s turn:")
                 
-                if current_bid == (1, 1):
+                if current_bid is None:
                     # First turn, ask for a bid
                     action = player.bid(current_bid)
                 else:
@@ -114,18 +121,28 @@ def play_liars_dice(num_players=2):
                     total_count = sum([player.dice.count(current_bid[1]) for player in players])
                     result = player.call_bluff(current_bid, total_count)
                     if result:
-                        total_dice_count[i-1] -= 1
+                        # Player getting called out loses a die
+                        previous_player_index = (i - 1) % num_players
+                        players[previous_player_index].lose_die()
                     else:
-                        total_dice_count[i] -= 1
+                        # Player who called loses a die
+                        player.lose_die()
                     break
                 else:
                     current_bid = action
 
-            if 0 in total_dice_count:
-                if total_dice_count[0] == 0:
-                    return "CPU"
-                else:
-                    return "Player"
+            if 0 in [player.dice_count for player in players]:
+                
+                print("END GAME REACHED")
+                # if total_dice_count[0] == 0:
+                #     return "CPU"
+                # else:
+                #     return "Player"
+            
+            # Start new round if someone called
+            if action == "call":
+                print(f"\nYour dice: {players[0].dice_count} CPU dice: {players[1].dice_count}")
+                break
 
 # Main game loop
 while True:
